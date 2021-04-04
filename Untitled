@@ -1,0 +1,682 @@
+<template>
+  <div :class="$style.calendarContainer" v-on:click.self="isclosed = false">
+    <CalendarPopoverTarget />
+    <CalendarPopover
+      :open="calenderOptionsOpened"
+      @dismiss="calenderOptionsOpened = false"
+    >
+      <AInput
+        :placeholder="placeholder"
+        :icon="'Calendar'"
+        :value="getPlaceholderDate"
+        :size="'regular'"
+        :variant="'bodydefault'"
+        @focus="openDropdown"
+        @iconclick="openDropdown"
+      ></AInput>
+      <template v-slot:popovercontent>
+        <div
+          :class="[$style.aCalendarPanel, $style.flexVertical]"
+          v-if="!isclosed"
+        >
+          <!-- @ruchila move this to calendar header component -->
+          <div :class="[$style.displayFlex, $style.spaceBetween]">
+            <div
+              :class="{
+                [$style.aCalendarMm]: true,
+                [$style.floatLeft]: true,
+                [$style.disableClick]: showYears
+              }"
+            >
+              <ATypography
+                :class="{ [$style.selected]: showMonths }"
+                :variant="'subtitledefault'"
+                >{{ getSelectedMonth.displayName }}</ATypography
+              >
+              <AIcon
+                style="margin-left: 4px;"
+                v-if="!showMonths"
+                height="16px"
+                :type="'DownArrow'"
+                @click="showMonthPanel(true)"
+              ></AIcon>
+              <AIcon
+                style="margin-left: 4px;"
+                v-if="showMonths"
+                height="16px"
+                :color="'colorPrimary'"
+                :type="'UpArrow'"
+                @click="showMonthPanel(false)"
+              ></AIcon>
+            </div>
+            <div
+              :class="{
+                [$style.aCalendarYy]: true,
+                [$style.disableClick]: showMonths
+              }"
+            >
+              <ATypography
+                :class="{ [$style.selected]: showYears }"
+                :variant="'subtitledefault'"
+                >{{ getSelectedYear.year }}</ATypography
+              >
+              <AIcon
+                style="margin-left: 4px;"
+                v-if="!showYears"
+                height="16px"
+                :type="'DownArrow'"
+                @click="showYearPanel(true)"
+              ></AIcon>
+              <AIcon
+                style="margin-left: 4px;"
+                v-if="showYears"
+                height="16px"
+                :color="'colorPrimary'"
+                :type="'UpArrow'"
+                @click="showYearPanel(false)"
+              ></AIcon>
+            </div>
+          </div>
+          <!-- @ruchila move this to calendar body component -->
+          <div style="padding: 0 16px 8px 16px;">
+            <div v-if="!showMonths && !showYears" class="a-calendar-date-panel">
+              <div :class="$style.aCalendarWeekdays">
+                <ATypography
+                  :variant="'bodysmall'"
+                  :color="'colorOnSurface50'"
+                  :class="$style.alignItem"
+                  >S</ATypography
+                >
+                <ATypography
+                  :variant="'bodysmall'"
+                  :color="'colorOnSurface50'"
+                  :class="$style.alignItem"
+                  >M</ATypography
+                >
+                <ATypography
+                  :variant="'bodysmall'"
+                  :color="'colorOnSurface50'"
+                  :class="$style.alignItem"
+                  >T</ATypography
+                >
+                <ATypography
+                  :variant="'bodysmall'"
+                  :color="'colorOnSurface50'"
+                  :class="$style.alignItem"
+                  >W</ATypography
+                >
+                <ATypography
+                  :variant="'bodysmall'"
+                  :color="'colorOnSurface50'"
+                  :class="$style.alignItem"
+                  >T</ATypography
+                >
+                <ATypography
+                  :variant="'bodysmall'"
+                  :color="'colorOnSurface50'"
+                  :class="$style.alignItem"
+                  >F</ATypography
+                >
+                <ATypography
+                  :variant="'bodysmall'"
+                  :color="'colorOnSurface50'"
+                  :class="$style.alignItem"
+                  >S</ATypography
+                >
+              </div>
+              <hr :class="$style.borderGray" />
+              <div :class="$style.aCalendarDd">
+                <div
+                  v-for="(day, index) in getAllDays"
+                  :key="index"
+                  @click="chooseDay(day)"
+                  :class="{
+                    [$style.day]: true,
+                    [$style.alignItem]: true,
+                    [$style.active]: day.active,
+                    [$style.inactive]: !day.active,
+                    [$style.disabled]: day.disabled,
+                    [$style.disableClick]: day.disabled
+                  }"
+                >
+                  <ATypography
+                    :variant="'bodysmall'"
+                    :color="'colorOnSurface50'"
+                    v-if="day.disabled"
+                    >{{ day.date }}</ATypography
+                  >
+                  <ATypography
+                    :variant="'bodysmall'"
+                    :color="'colorOnSurface50'"
+                    v-else-if="!day.active"
+                    >{{ day.date }}</ATypography
+                  >
+                  <ATypography
+                    :class="{
+                      [$style.currentDate]:
+                        getSelectedDay.date === day.date &&
+                        getSelectedMonth.value === day.month,
+                      [$style.selectedDate]:
+                        currentDate === day.date &&
+                        currentMonth === day.month &&
+                        currentYear === getSelectedYear.year
+                    }"
+                    :variant="'bodysmall'"
+                    :color="'colorSecondary'"
+                    v-else-if="day.active"
+                    >{{ day.date }}</ATypography
+                  >
+                </div>
+              </div>
+            </div>
+            <div v-if="showMonths" :class="$style.aCalendarMonthPanel">
+              <div
+                :class="{
+                  [$style.aCalendarMonth]: true,
+                  [$style.alignItem]: true
+                }"
+                v-for="month of getMonths"
+                :key="month.value"
+                @click="chooseMonth(month)"
+              >
+                <ATypography
+                  :class="{
+                    [$style.aCalendarMonthActive]:
+                      month.value === getSelectedMonth.value
+                  }"
+                  :variant="'bodysmall'"
+                  :color="'colorSecondary'"
+                  >{{ month.displayName.substring(0, 3) }}</ATypography
+                >
+              </div>
+            </div>
+            <div v-if="showYears" :class="$style.aCalendarYearPanel">
+              <div
+                :class="{
+                  [$style.aCalendarYear]: true,
+                  [$style.alignItem]: true
+                }"
+                v-for="(year, i) of getYears"
+                :key="'year_' + i"
+                @click="chooseYear(year)"
+              >
+                <ATypography
+                  :class="{
+                    [$style.aCalendarYearActive]:
+                      year.year === getSelectedYear.year
+                  }"
+                  :variant="'bodysmall'"
+                  :color="'colorSecondary'"
+                  >{{ year.year }}</ATypography
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+    </CalendarPopover>
+  </div>
+</template>
+<script lang="ts">
+import Vue from "vue";
+// import "../../primitivecomponents/styles.scss";
+import ATypography from "../ATypography.vue";
+import AIcon from "../AIcon.vue";
+import AInput from "../AInput.vue";
+import CalendarPopover from "./CalendarPopover.vue";
+import CalendarPopoverTarget from "./CalendarPopoverTarget.vue";
+
+export default Vue.extend({
+  name: "a-calendar",
+  components: {
+    ATypography,
+    AInput,
+    AIcon,
+    CalendarPopover,
+    CalendarPopoverTarget
+  },
+  data: () => ({
+    isclosed: true,
+    fieldOnfocus: false,
+    showMonths: false,
+    showYears: false,
+    selectedDay: null,
+    selectedMonth: null,
+    selectedYear: null,
+    calenderOptionsOpened: false
+  }),
+  props: {
+    disabled: {
+      type: Boolean,
+      default: false
+    },
+    // @ruchila this is not showing up in storybook
+    placeholder: {
+      type: String
+    },
+    // @ruchila provide the doc string with default values
+    validateStatus: {
+      type: String,
+      default: "success"
+    },
+    /**
+     * Return true for disabled date and false for not disabled
+     */
+    customDatePredictor: {
+      type: Function,
+      required: true
+    },
+    customYearPredictor: {
+      type: Function,
+      required: true
+    },
+    selectedDate: {
+      type: Date,
+      validator: function(value: any) {
+        return value instanceof Date || value === undefined;
+      }
+    },
+    variant: {
+      type: String,
+      default: "bodydefault"
+    },
+    closeOnSelect: {
+      type: Boolean,
+      default: false
+    }
+  },
+  computed: {
+    isLabelInCenter() {
+      return !this.selectedDate && !this.fieldOnfocus;
+    },
+    dayStart() {
+      /** Get the start date of the grid */
+      const currentSelectedDate = new Date(
+        this.getSelectedYear.year,
+        this.getSelectedMonth.value,
+        1
+      );
+      let startDate = 1;
+      for (let i = 1; i <= currentSelectedDate.getDay(); i++) {
+        startDate = new Date(
+          this.getSelectedYear.year,
+          this.getSelectedMonth.value,
+          1 - i
+        ).getDate();
+      }
+      return startDate;
+    },
+
+    getAllDays() {
+      /** Size of days should be 42 max for the grid */
+      const allDays = [];
+      const currentMonth = new Date(
+        (this as any).getSelectedYear.year,
+        (this as any).getSelectedMonth.value + 1,
+        0
+      );
+      const previousMonth = new Date(
+        (this as any).getSelectedYear.year,
+        (this as any).getSelectedMonth.value,
+        0
+      );
+      const nextMonth = new Date(
+        (this as any).getSelectedYear.year,
+        (this as any).getSelectedMonth.value + 2,
+        0
+      );
+
+      if ((this as any).dayStart !== 1) {
+        /** Day grid starts with previous month */
+        const previousMonthDays = new Date(
+          this.getSelectedYear.year,
+          this.getSelectedMonth.value,
+          0
+        ).getDate();
+        for (let i = (this as any).dayStart; i <= previousMonthDays; i++) {
+          allDays.push({
+            date: i,
+            month: previousMonth.getMonth(),
+            active: false,
+            disabled: this.customDatePredictor(
+              new Date(previousMonth.getFullYear(), previousMonth.getMonth(), i)
+            ),
+            previous: true
+          });
+        }
+      }
+      /** If day grid starts with 1, just start appending after the last date */
+      for (let i = 1; i <= currentMonth.getDate(); i++) {
+        allDays.push({
+          date: i,
+          month: currentMonth.getMonth(),
+          active: true,
+          disabled: this.customDatePredictor(
+            new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i)
+          )
+        });
+      }
+      /** If day grid does not end on a Saturday */
+      if (currentMonth.getDay() !== 6) {
+        for (let i = 1; i <= 6 - currentMonth.getDay(); i++) {
+          allDays.push({
+            date: i,
+            month: nextMonth.getMonth(),
+            active: false,
+            disabled: this.customDatePredictor(
+              new Date(nextMonth.getFullYear(), nextMonth.getMonth(), i)
+            ),
+            next: true
+          });
+        }
+      }
+      return allDays;
+    },
+    getMonths() {
+      return [
+        { displayName: "January", value: 0 },
+        { displayName: "February", value: 1 },
+        { displayName: "March", value: 2 },
+        { displayName: "April", value: 3 },
+        { displayName: "May", value: 4 },
+        { displayName: "June", value: 5 },
+        { displayName: "July", value: 6 },
+        { displayName: "August", value: 7 },
+        { displayName: "September", value: 8 },
+        { displayName: "October", value: 9 },
+        { displayName: "November", value: 10 },
+        { displayName: "December", value: 11 }
+      ];
+    },
+    getYears() {
+      const years = [];
+      for (let i = -40; i < 40; i++) {
+        years.push({
+          year: new Date().getFullYear() + i,
+          active: this.customYearPredictor(
+            new Date(
+              (this as any).getSelectedYear.year + i,
+              (this as any).getSelectedMonth.value,
+              1
+            ),
+            new Date()
+          )
+        });
+      }
+      return years;
+    },
+    getPlaceholderDate() {
+      let ddMMyy;
+      if (this.selectedDate) {
+        ddMMyy =
+          new Date(this.selectedDate).getDate() +
+          "/" +
+          (new Date(this.selectedDate).getMonth() + 1) +
+          "/" +
+          new Date(this.selectedDate).getFullYear();
+      }
+      return ddMMyy;
+    },
+    currentDate() {
+      return new Date().getDate();
+    },
+    currentMonth() {
+      return new Date().getMonth();
+    },
+    currentYear() {
+      return new Date().getFullYear();
+    },
+    getSelectedDay() {
+      if (this.selectedDate) {
+        return {
+          date: new Date(this.selectedDate).getDate(),
+          month: new Date(this.selectedDate).getMonth(),
+          active: true
+        };
+      } else {
+        return {
+          date: (this as any).currentDate,
+          month: (this as any).currentMonth,
+          active: true
+        };
+      }
+    },
+    getSelectedMonth() {
+      if (this.selectedDate) {
+        return (this as any).getMonths[new Date(this.selectedDate).getMonth()];
+      } else {
+        return (this as any).getMonths[(this as any).currentMonth];
+      }
+    },
+    getSelectedYear() {
+      if (this.selectedDate) {
+        return {
+          year: new Date(this.selectedDate).getFullYear(),
+          active: true
+        };
+      } else {
+        return { year: (this as any).currentYear, active: true };
+      }
+    }
+  },
+  methods: {
+    openDropdown() {
+      this.calenderOptionsOpened = true;
+      if (!this.disabled) {
+        this.isclosed = false;
+      }
+    },
+    closeDropdown() {
+      debugger
+      this.calenderOptionsOpened = false;
+      this.isclosed = true;
+    },
+    stopPropagation(ev: { stopPropagation: () => {} }) {
+      ev.stopPropagation();
+    },
+    onfocusin() {
+      this.fieldOnfocus = true;
+    },
+    onfocusout() {
+      this.fieldOnfocus = false;
+    },
+    showMonthPanel(bool: boolean) {
+      debugger
+      this.showMonths = bool;
+    },
+    showYearPanel(bool: boolean) {
+      this.showYears = bool;
+    },
+    chooseDay(day: {
+      date: number;
+      month: number;
+      active: boolean;
+      previous: boolean;
+      next: boolean;
+    }) {
+      let newDate;
+      if (day["previous"]) {
+        newDate = new Date(
+          this.getSelectedYear.year,
+          this.getSelectedMonth.value - 1,
+          day.date
+        );
+      } else if (day["next"]) {
+        newDate = new Date(
+          this.getSelectedYear.year,
+          this.getSelectedMonth.value + 1,
+          day.date
+        );
+      } else {
+        newDate = new Date(this.getSelectedYear.year, day.month, day.date);
+      }
+      this.handleDateChange(newDate);
+      if (this.closeOnSelect) {
+        this.closeDropdown();
+      }
+    },
+    chooseMonth(month: { displayName: string; value: number }) {
+      this.showMonths = false;
+      this.handleDateChange(
+        new Date(this.getSelectedYear.year, month.value, 1)
+      );
+    },
+    chooseYear(fullYear: { year: number; active: boolean }) {
+      this.showYears = false;
+      this.handleDateChange(new Date(fullYear.year, 0, 1));
+    },
+    handleDateChange(date: Date) {
+      this.$emit("selected", date);
+    }
+  }
+});
+</script>
+<style lang="scss" module>
+@import "../theme.module.scss";
+.transformClassCalendar {
+  position: absolute;
+  background: white;
+  padding-left: 5px;
+  padding-right: 5px;
+  top: -8px;
+  left: 7px;
+  font-size: 0.82em;
+  pointer-events: none;
+  color: #676777;
+  font-family: Roboto;
+  font-size: 12px;
+}
+.calendarContainer {
+  position: relative;
+  color: #26273d;
+  margin-top: 10px;
+}
+.standardSize {
+  height: 40px;
+  width: 256px;
+  border: 1px solid #d4d4d8;
+  border-radius: 3px;
+  background-color: #ffffff;
+  box-sizing: border-box;
+  position: relative;
+}
+.floatRight {
+  float: right;
+}
+.floatLeft {
+  float: left;
+}
+.aCalendarPanel {
+  min-height: 260px;
+  width: 256px;
+  border-radius: 4px;
+  background-color: #ffffff;
+  box-shadow: 0 2px 8px 0 rgba(38, 39, 61, 0.15);
+  position: absolute;
+  // top: 40px;
+}
+.aCalendarMonthPanel,
+.aCalendarYearPanel {
+  display: grid;
+  grid-template-columns: auto auto auto auto;
+  max-height: 195px;
+  overflow-y: scroll;
+  overflow-x: hidden;
+}
+.aCalendarMonth,
+.aCalendarYear {
+  height: 32px;
+  width: 56px;
+}
+
+.aCalendarMm,
+.aCalendarYy {
+  display: flex;
+  align-items: center;
+}
+
+.aCalendarDd,
+.aCalendarMm,
+.aCalendarYy,
+.aCalendarMonthPanel,
+.aCalendarYearPanel {
+  cursor: pointer;
+}
+.aCalendarYearActive,
+.aCalendarMonthActive {
+  background: $colorPrimary !important;
+  color: $colorOnPrimary !important;
+  border-radius: 14px;
+  height: 28px;
+  width: 52px;
+  line-height: 28px;
+}
+.day {
+  height: 32px;
+  width: 32px;
+}
+.day:hover {
+  background: $colorOnBackground10 !important;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  line-height: 28px;
+}
+.currentDate {
+  background: $colorPrimary !important;
+  color: $colorOnPrimary !important;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  line-height: 28px;
+}
+.selectedDate {
+  color: #26273d;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  line-height: 28px;
+  border: 1px solid $colorOnSurface70;
+}
+.flexVertical {
+  display: flex;
+  flex-direction: column;
+}
+.alignItem {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+.displayFlex {
+  display: flex;
+}
+.spaceBetween {
+  justify-content: space-between;
+  padding: 16px;
+}
+.aCalendarWeekdays,
+.aCalendarDd {
+  display: grid;
+  grid-template-columns: auto auto auto auto auto auto auto;
+  color: $colorOnSurface10;
+}
+.disableClick {
+  pointer-events: none;
+}
+.selected {
+  color: $colorPrimary;
+}
+.borderGray {
+  border: 1px solid $colorOnSurface10;
+}
+.active {
+  color: $colorOnSurface100;
+}
+.inactive {
+  color: $colorOnSurface10;
+}
+.disabled {
+  color: $colorOnSurface50;
+}
+</style>
